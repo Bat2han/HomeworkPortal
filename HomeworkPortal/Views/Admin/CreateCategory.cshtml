@@ -1,0 +1,22 @@
+﻿@model HomeworkPortal.Models.Category
+
+@{
+    ViewData["Title"] = "Yeni Kategori";
+}
+
+<h2 class="mb-3">Yeni Kategori Ekle</h2>
+
+<form asp-action="CreateCategory" method="post" class="bg-white p-4 rounded shadow-sm">
+    <div class="mb-3">
+        <label class="form-label">Kategori Adı</label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Açıklama</label>
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-success">Kaydet</button>
+    <a asp-action="Categories" class="btn btn-secondary ms-2">Geri</a>
+</form>

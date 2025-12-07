@@ -1,0 +1,49 @@
+﻿@{
+    ViewData["Title"] = "Admin Paneli";
+}
+
+<h2 class="mb-4">Admin Paneli</h2>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a asp-controller="Admin" asp-action="Users" class="text-decoration-none">
+            <div class="card text-white bg-primary shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Toplam Kullanıcı</h5>
+                    <p class="display-4 mb-1">@ViewBag.UserCount</p>
+                    <p class="mb-0"><small>Detaylı liste için tıklayın</small></p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a asp-controller="Admin" asp-action="Categories" class="text-decoration-none">
+            <div class="card text-white bg-success shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Toplam Kategori</h5>
+                    <p class="display-4 mb-1">@ViewBag.CategoryCount</p>
+                    <p class="mb-0"><small>Kategorileri yönetmek için tıklayın</small></p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                Hızlı Erişim
+            </div>
+            <div class="card-body">
+                <a asp-controller="Admin" asp-action="Users" class="btn btn-outline-primary me-2 mb-2">
+                    Kullanıcı Listesi
+                </a>
+                <a asp-controller="Admin" asp-action="Categories" class="btn btn-outline-success mb-2">
+                    Kategori Yönetimi
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

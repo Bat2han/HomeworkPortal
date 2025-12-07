@@ -1,0 +1,136 @@
+﻿@model IEnumerable<HomeworkPortal.Models.Assignment>
+@using HomeworkPortal.Models
+
+@{
+    ViewData["Title"] = "Öğretmen Paneli";
+    var categories = ViewBag.Categories as List<Category>;
+}
+
+<h2 class="mb-4">Öğretmen Paneli</h2>
+
+<div class="mb-3">
+    <button class="btn btn-primary" id="btnNew">
+        <i class="bi bi-plus-circle"></i> Yeni Ödev Ver (AJAX)
+    </button>
+</div>
+
+<div id="createAssignmentContainer"></div>
+
+<hr class="my-4" />
+
+<h3 class="mb-3">Verdiğim Ödevler</h3>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Henüz verdiğiniz bir ödev bulunmuyor.</div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var a in Model.OrderByDescending(x => x.CreatedAt))
+        {
+            var cat = categories?.FirstOrDefault(c => c.Id == a.CategoryId);
+            var now = DateTime.Now;
+            string badgeClass;
+            string badgeText;
+
+            if (a.DueDate == null)
+            {
+                badgeClass = "bg-secondary";
+                badgeText = "Tarih yok";
+            }
+            else if (a.DueDate < now)
+            {
+                badgeClass = "bg-danger";
+                badgeText = "Süresi Doldu";
+            }
+            else if (a.DueDate <= now.AddDays(3))
+            {
+                badgeClass = "bg-warning text-dark";
+                badgeText = "Yaklaşıyor";
+            }
+            else
+            {
+                badgeClass = "bg-success";
+                badgeText = "Aktif";
+            }
+
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">@a.Title</h5>
+                            <span class="badge @badgeClass">@badgeText</span>
+                        </div>
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            Kategori: @(cat?.Name ?? "-")
+                        </h6>
+                        <p class="card-text small flex-grow-1">
+                            @a.Description
+                        </p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                Oluşturma: @a.CreatedAt.ToString("g")<br />
+                                Bitiş: @(a.DueDate?.ToString("g") ?? "-")
+                            </small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- jQuery & Script (AJAX + modal için) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script>
+    console.log("TeacherDashboard script yüklendi");
+
+    $(function () {
+
+        // Yeni ödev formunu AJAX ile yükle
+        $("#btnNew").on("click", function () {
+            console.log("Yeni Ödev Ver butonuna tıklandı");
+
+            $.ajax({
+                url: "@Url.Action("CreatePartial", "Assignment")",
+                method: "GET",
+                success: function (html) {
+                    console.log("Partial başarıyla geldi");
+                    $("#createAssignmentContainer").html(html);
+                    // form TeacherDashboard içinde olduğundan ekstra JS gerek yok,
+                    // partial sadece HTML form
+                },
+                error: function (xhr, status, error) {
+                    alert("Partial yüklenirken hata: " + status + " - " + error);
+                }
+            });
+        });
+
+        // Partial sonradan yüklendiği için delegated click
+        $(document).on("click", "#btnSaveAssignment", function () {
+            console.log("Kaydet butonuna tıklandı");
+
+            var form = $("#createAssignmentForm");
+
+            $.ajax({
+                url: "@Url.Action("CreateAjax", "Assignment")",
+                method: "POST",
+                data: form.serialize(),
+                success: function (res) {
+                    if (res.success) {
+                        alert("Ödev başarıyla oluşturuldu.");
+                        location.reload();
+                    } else {
+                        $("#createAssignmentContainer").html(res);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert("Kaydederken hata: " + status + " - " + error);
+                }
+            });
+        });
+
+    });
+</script>

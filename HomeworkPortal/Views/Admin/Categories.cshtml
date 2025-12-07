@@ -1,0 +1,27 @@
+﻿@model IEnumerable<HomeworkPortal.Models.Category>
+
+@{
+    ViewData["Title"] = "Kategoriler";
+}
+
+<h2>Kategoriler</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Adı</th>
+            <th>Açıklama</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.Id</td>
+                <td>@c.Name</td>
+                <td>@c.Description</td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,29 @@
+﻿@model IEnumerable<HomeworkPortal.Models.User>
+
+@{
+    ViewData["Title"] = "Kullanıcılar";
+}
+
+<h2 class="mb-3">Kullanıcılar</h2>
+
+<table class="table table-striped table-hover bg-white shadow-sm">
+    <thead class="table-dark">
+        <tr>
+            <th>Id</th>
+            <th>Kullanıcı Adı</th>
+            <th>E-posta</th>
+            <th>Rol</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in Model)
+        {
+            <tr>
+                <td>@u.Id</td>
+                <td>@u.UserName</td>
+                <td>@u.Email</td>
+                <td>@u.Role</td>
+            </tr>
+        }
+    </tbody>
+</table>

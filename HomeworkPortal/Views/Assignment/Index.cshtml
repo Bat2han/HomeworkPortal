@@ -1,0 +1,123 @@
+﻿@model IEnumerable<HomeworkPortal.Models.Assignment>
+@using HomeworkPortal.Models
+
+@{
+    ViewData["Title"] = "Ödev Listesi";
+    var categories = ViewBag.Categories as List<Category>;
+}
+
+<h2 class="mb-4">Ödev Listesi</h2>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Henüz verilmiş bir ödev bulunmuyor.</div>
+}
+else
+{
+    <table class="table table-hover table-bordered bg-white shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Başlık</th>
+                <th>Kategori</th>
+                <th>Durum</th>
+                <th>Oluşturma</th>
+                <th>Bitiş</th>
+                <th>Detay</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in Model.OrderBy(x => x.DueDate ?? DateTime.MaxValue))
+            {
+                var cat = categories?.FirstOrDefault(c => c.Id == a.CategoryId);
+                var now = DateTime.Now;
+                string badgeClass;
+                string badgeText;
+
+                if (a.DueDate == null)
+                {
+                    badgeClass = "bg-secondary";
+                    badgeText = "Tarih yok";
+                }
+                else if (a.DueDate < now)
+                {
+                    badgeClass = "bg-danger";
+                    badgeText = "Süresi Doldu";
+                }
+                else if (a.DueDate <= now.AddDays(3))
+                {
+                    badgeClass = "bg-warning text-dark";
+                    badgeText = "Yaklaşıyor";
+                }
+                else
+                {
+                    badgeClass = "bg-success";
+                    badgeText = "Aktif";
+                }
+
+                <tr>
+                    <td>@a.Title</td>
+                    <td>@(cat?.Name ?? "-")</td>
+                    <td>
+                        <span class="badge @badgeClass">@badgeText</span>
+                    </td>
+                    <td>@a.CreatedAt.ToString("g")</td>
+                    <td>@(a.DueDate?.ToString("g") ?? "-")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary btn-detail"
+                                data-title="@a.Title"
+                                data-description="@a.Description"
+                                data-category="@(cat?.Name ?? "-")"
+                                data-created="@a.CreatedAt.ToString("g")"
+                                data-due="@(a.DueDate?.ToString("g") ?? "-")">
+                            Detay
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- Modal -->
+<div class="modal fade" id="assignmentDetailModal" tabindex="-1" aria-labelledby="assignmentDetailLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignmentDetailLabel">Ödev Detayı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Başlık:</strong> <span id="detailTitle"></span></p>
+                <p><strong>Kategori:</strong> <span id="detailCategory"></span></p>
+                <p><strong>Oluşturma Tarihi:</strong> <span id="detailCreated"></span></p>
+                <p><strong>Bitiş Tarihi:</strong> <span id="detailDue"></span></p>
+                <hr />
+                <p><strong>Açıklama:</strong></p>
+                <p id="detailDescription"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $(".btn-detail").on("click", function () {
+                var btn = $(this);
+
+                $("#detailTitle").text(btn.data("title"));
+                $("#detailCategory").text(btn.data("category"));
+                $("#detailCreated").text(btn.data("created"));
+                $("#detailDue").text(btn.data("due"));
+                $("#detailDescription").text(btn.data("description"));
+
+                var modalEl = document.getElementById('assignmentDetailModal');
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            });
+        });
+    </script>
+}

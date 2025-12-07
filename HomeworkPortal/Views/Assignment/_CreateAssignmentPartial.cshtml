@@ -1,0 +1,42 @@
+﻿@model HomeworkPortal.ViewModels.AssignmentCreateViewModel
+@using HomeworkPortal.Models
+
+@{
+    var categories = ViewBag.Categories as List<Category>;
+}
+
+<div class="card mb-3">
+    <div class="card-header">
+        Yeni Ödev Oluştur
+    </div>
+    <div class="card-body">
+        <form id="createAssignmentForm">
+            <div class="mb-3">
+                <label class="form-label">Başlık</label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Açıklama</label>
+                <textarea asp-for="Description" class="form-control"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Bitiş Tarihi</label>
+                <input asp-for="DueDate" type="datetime-local" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Kategori</label>
+                <select asp-for="CategoryId" class="form-select">
+                    <option value="">Seçiniz</option>
+                    @foreach (var c in categories!)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
+            </div>
+            <button type="button" class="btn btn-success" id="btnSaveAssignment">Kaydet</button>
+        </form>
+    </div>
+</div>
