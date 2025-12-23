@@ -2,7 +2,7 @@
 
 namespace HomeworkPortal.Models
 {
-    // Ödevlerin ait olduğu kategoriler (Matematik, Fizik, vb.)
+    
     public class Category
     {
         public int Id { get; set; }

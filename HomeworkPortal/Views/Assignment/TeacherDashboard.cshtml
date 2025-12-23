@@ -3,15 +3,24 @@
 
 @{
     ViewData["Title"] = "Öğretmen Paneli";
-    var categories = ViewBag.Categories as List<Category>;
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
 }
 
 <h2 class="mb-4">Öğretmen Paneli</h2>
 
-<div class="mb-3">
+<div class="mb-3 d-flex flex-wrap gap-2">
     <button class="btn btn-primary" id="btnNew">
         <i class="bi bi-plus-circle"></i> Yeni Ödev Ver (AJAX)
     </button>
+
+    @* ❌ Öğretmen panelinde "Teslimlerim (Öğrenci)" gösterme.
+       Bu link sadece Student rolünde görünmeli (Layout/Student menüsüne koy). *@
+    @if (User.IsInRole("Student"))
+    {
+        <a class="btn btn-outline-secondary" asp-controller="Submission" asp-action="My">
+            Teslimlerim
+        </a>
+    }
 </div>
 
 <div id="createAssignmentContainer"></div>
@@ -29,8 +38,9 @@ else
     <div class="row g-3">
         @foreach (var a in Model.OrderByDescending(x => x.CreatedAt))
         {
-            var cat = categories?.FirstOrDefault(c => c.Id == a.CategoryId);
+            var cat = categories.FirstOrDefault(c => c.Id == a.CategoryId);
             var now = DateTime.Now;
+
             string badgeClass;
             string badgeText;
 
@@ -55,25 +65,52 @@ else
                 badgeText = "Aktif";
             }
 
-            <div class="col-md-4">
+            <div class="col-12 col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm">
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <h5 class="card-title mb-0">@a.Title</h5>
                             <span class="badge @badgeClass">@badgeText</span>
                         </div>
+
                         <h6 class="card-subtitle mb-2 text-muted">
                             Kategori: @(cat?.Name ?? "-")
                         </h6>
+
                         <p class="card-text small flex-grow-1">
                             @a.Description
                         </p>
-                        <p class="card-text">
+
+                        <p class="card-text mb-3">
                             <small class="text-muted">
                                 Oluşturma: @a.CreatedAt.ToString("g")<br />
                                 Bitiş: @(a.DueDate?.ToString("g") ?? "-")
                             </small>
                         </p>
+
+                        <!-- ✅ Butonlar -->
+                        <div class="d-flex gap-2 mt-auto align-items-center">
+                            <!-- Teslimleri gör -->
+                            <a class="btn btn-sm btn-outline-primary"
+                               asp-controller="Submission"
+                               asp-action="ByAssignment"
+                               asp-route-assignmentId="@a.Id">
+                                Teslimler
+                            </a>
+
+                            <!-- 🗑️ Silme -->
+                            <form asp-controller="Assignment"
+                                  asp-action="Delete"
+                                  method="post"
+                                  class="ms-auto"
+                                  onsubmit="return confirm('Bu ödevi silmek istediğine emin misin?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@a.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    Sil
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -81,56 +118,50 @@ else
     </div>
 }
 
-<!-- jQuery & Script (AJAX + modal için) -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+@section Scripts {
+    <script>
+        console.log("TeacherDashboard script yüklendi");
 
-<script>
-    console.log("TeacherDashboard script yüklendi");
+        $(function () {
 
-    $(function () {
+            $("#btnNew").on("click", function () {
+                console.log("Yeni Ödev Ver butonuna tıklandı");
 
-        // Yeni ödev formunu AJAX ile yükle
-        $("#btnNew").on("click", function () {
-            console.log("Yeni Ödev Ver butonuna tıklandı");
-
-            $.ajax({
-                url: "@Url.Action("CreatePartial", "Assignment")",
-                method: "GET",
-                success: function (html) {
-                    console.log("Partial başarıyla geldi");
-                    $("#createAssignmentContainer").html(html);
-                    // form TeacherDashboard içinde olduğundan ekstra JS gerek yok,
-                    // partial sadece HTML form
-                },
-                error: function (xhr, status, error) {
-                    alert("Partial yüklenirken hata: " + status + " - " + error);
-                }
-            });
-        });
-
-        // Partial sonradan yüklendiği için delegated click
-        $(document).on("click", "#btnSaveAssignment", function () {
-            console.log("Kaydet butonuna tıklandı");
-
-            var form = $("#createAssignmentForm");
-
-            $.ajax({
-                url: "@Url.Action("CreateAjax", "Assignment")",
-                method: "POST",
-                data: form.serialize(),
-                success: function (res) {
-                    if (res.success) {
-                        alert("Ödev başarıyla oluşturuldu.");
-                        location.reload();
-                    } else {
-                        $("#createAssignmentContainer").html(res);
+                $.ajax({
+                    url: "@Url.Action("CreatePartial", "Assignment")",
+                    method: "GET",
+                    success: function (html) {
+                        $("#createAssignmentContainer").html(html);
+                    },
+                    error: function (xhr, status, error) {
+                        alert("Partial yüklenirken hata: " + status + " - " + error);
                     }
-                },
-                error: function (xhr, status, error) {
-                    alert("Kaydederken hata: " + status + " - " + error);
-                }
+                });
             });
-        });
 
-    });
-</script>
+            $(document).on("click", "#btnSaveAssignment", function () {
+                console.log("Kaydet butonuna tıklandı");
+
+                var form = $("#createAssignmentForm");
+
+                $.ajax({
+                    url: "@Url.Action("CreateAjax", "Assignment")",
+                    method: "POST",
+                    data: form.serialize(),
+                    success: function (res) {
+                        if (res.success) {
+                            alert("Ödev başarıyla oluşturuldu.");
+                            location.reload();
+                        } else {
+                            $("#createAssignmentContainer").html(res);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        alert("Kaydederken hata: " + status + " - " + error);
+                    }
+                });
+            });
+
+        });
+    </script>
+}

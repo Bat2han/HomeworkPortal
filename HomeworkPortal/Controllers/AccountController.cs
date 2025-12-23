@@ -1,41 +1,48 @@
-﻿using System.Security.Claims;
-using HomeworkPortal.Models;
-using HomeworkPortal.Repositories;
+﻿using HomeworkPortal.Models;
 using HomeworkPortal.ViewModels;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HomeworkPortal.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly IRepository<User> _userRepo;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly RoleManager<IdentityRole<int>> _roleManager;
 
-        public AccountController(IRepository<User> userRepo)
+        public AccountController(
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            RoleManager<IdentityRole<int>> roleManager)
         {
-            _userRepo = userRepo;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _roleManager = roleManager;
         }
 
-        // GET: /Account/Login
+        
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult Login()
         {
             return View(new LoginViewModel());
         }
 
-        // POST: /Account/Login
+        
         [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            var users = await _userRepo.FindAsync(u =>
-                (u.Email == model.EmailOrUserName || u.UserName == model.EmailOrUserName)
-                && u.PasswordHash == model.Password);
-
-            var user = users.FirstOrDefault();
+           
+            ApplicationUser? user = await _userManager.FindByEmailAsync(model.EmailOrUserName);
+            if (user == null)
+                user = await _userManager.FindByNameAsync(model.EmailOrUserName);
 
             if (user == null)
             {
@@ -43,84 +50,135 @@ namespace HomeworkPortal.Controllers
                 return View(model);
             }
 
-            await SignInUser(user);
+           
+            var result = await _signInManager.PasswordSignInAsync(
+                user, model.Password, isPersistent: true, lockoutOnFailure: false);
 
-            // 🔽 Rolüne göre yönlendirme
-            return user.Role switch
+            if (!result.Succeeded)
             {
-                UserRole.Admin => RedirectToAction("Index", "Admin"),
-                UserRole.Teacher => RedirectToAction("TeacherDashboard", "Assignment"),
-                UserRole.Student => RedirectToAction("Index", "Assignment"),
-                _ => RedirectToAction("Index", "Home")
-            };
+                ModelState.AddModelError("", "Kullanıcı adı/e-posta veya şifre hatalı.");
+                return View(model);
+            }
+
+            
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+                return RedirectToAction("Index", "Admin");
+
+            if (await _userManager.IsInRoleAsync(user, "Teacher"))
+                return RedirectToAction("TeacherDashboard", "Assignment");
+
+            if (await _userManager.IsInRoleAsync(user, "Student"))
+                return RedirectToAction("Index", "Assignment");
+
+            return RedirectToAction("Index", "Home");
         }
 
-        // POST: /Account/Register
+        
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Register()
+        {
+            return View(new RegisterViewModel());
+        }
+
+        
         [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            // Aynı email varsa reddet
-            var exists = await _userRepo.FindAsync(u => u.Email == model.Email);
-            if (exists.Any())
+            
+            var roleName = model.Role.ToString(); 
+            if (string.IsNullOrWhiteSpace(roleName) || roleName == "0")
             {
-                ModelState.AddModelError("Email", "Bu e-posta zaten kayıtlı.");
+                ModelState.AddModelError("", "Lütfen bir rol seçiniz.");
                 return View(model);
             }
 
-            var user = new User
+            
+            var existingByEmail = await _userManager.FindByEmailAsync(model.Email);
+            if (existingByEmail != null)
+            {
+                ModelState.AddModelError("", "Bu e-posta zaten kayıtlı.");
+                return View(model);
+            }
+
+            var existingByUserName = await _userManager.FindByNameAsync(model.UserName);
+            if (existingByUserName != null)
+            {
+                ModelState.AddModelError("", "Bu kullanıcı adı zaten alınmış.");
+                return View(model);
+            }
+
+            var user = new ApplicationUser
             {
                 UserName = model.UserName,
                 Email = model.Email,
-                PasswordHash = model.Password, // DEMO: düz yazıyoruz
-                Role = model.Role
+                EmailConfirmed = true
             };
 
-            await _userRepo.AddAsync(user);
-            await _userRepo.SaveChangesAsync();
+            
+            var createResult = await _userManager.CreateAsync(user, model.Password);
 
-            // İstersen direkt giriş yapabiliriz:
-            await SignInUser(user);
+            if (!createResult.Succeeded)
+            {
+                foreach (var e in createResult.Errors)
+                    ModelState.AddModelError("", e.Description);
+
+                return View(model);
+            }
+
+            
+            if (!await _roleManager.RoleExistsAsync(roleName))
+            {
+                var roleCreate = await _roleManager.CreateAsync(new IdentityRole<int>(roleName));
+                if (!roleCreate.Succeeded)
+                {
+                    foreach (var e in roleCreate.Errors)
+                        ModelState.AddModelError("", e.Description);
+
+                    return View(model);
+                }
+            }
+
+            
+            var addRoleResult = await _userManager.AddToRoleAsync(user, roleName);
+            if (!addRoleResult.Succeeded)
+            {
+                foreach (var e in addRoleResult.Errors)
+                    ModelState.AddModelError("", e.Description);
+
+                return View(model);
+            }
+
+            
+            await _signInManager.SignInAsync(user, isPersistent: true);
+
+            
+            if (roleName == "Admin") return RedirectToAction("Index", "Admin");
+            if (roleName == "Teacher") return RedirectToAction("TeacherDashboard", "Assignment");
+            if (roleName == "Student") return RedirectToAction("Index", "Assignment");
 
             return RedirectToAction("Index", "Home");
         }
 
-        // GET: /Account/AccessDenied
+        
+        [HttpGet]
         public IActionResult AccessDenied()
         {
             return View();
         }
 
-        // /Account/Logout
+        
+        [Authorize]
+        [HttpGet]
         public async Task<IActionResult> Logout()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction("Index", "Home");
-        }
-
-        // Cookie'ye claim'leri yazan yardımcı metod
-        private async Task SignInUser(User user)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim(ClaimTypes.Email, user.Email),
-                // Rolü string olarak cookie'ye yazıyoruz
-                new Claim(ClaimTypes.Role, user.Role.ToString())
-            };
-
-            var identity = new ClaimsIdentity(
-                claims,
-                CookieAuthenticationDefaults.AuthenticationScheme);
-
-            var principal = new ClaimsPrincipal(identity);
-
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                principal);
+            await _signInManager.SignOutAsync();
+            return RedirectToAction("Login", "Account");
         }
     }
 }

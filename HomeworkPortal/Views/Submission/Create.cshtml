@@ -1,0 +1,40 @@
+﻿@{
+    ViewData["Title"] = "Teslim Yap";
+    var assignmentId = (int)ViewBag.AssignmentId;
+}
+
+<div class="card shadow-sm">
+    <div class="card-header fw-semibold">
+        Teslim Yap - @ViewBag.AssignmentTitle
+    </div>
+    <div class="card-body">
+        <form asp-controller="Submission" asp-action="Create" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <input type="hidden" name="assignmentId" value="@assignmentId" />
+
+            <div class="mb-3">
+                <label class="form-label">Dosya</label>
+                <input type="file" name="file" class="form-control" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Not (opsiyonel)</label>
+                <textarea name="note" class="form-control" rows="3" maxlength="500"></textarea>
+            </div>
+
+            <button class="btn btn-primary">Teslim Et</button>
+            <a asp-controller="Submission" asp-action="My" class="btn btn-outline-secondary ms-2">Geri</a>
+        </form>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger mt-3">
+                @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <div>@err.ErrorMessage</div>
+                }
+            </div>
+        }
+    </div>
+</div>

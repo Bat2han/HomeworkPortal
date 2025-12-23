@@ -2,41 +2,57 @@
 @using HomeworkPortal.Models
 
 @{
-    var categories = ViewBag.Categories as List<Category>;
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
 }
 
-<div class="card mb-3">
-    <div class="card-header">
+<div class="card mb-3 shadow-sm">
+    <div class="card-header fw-semibold">
         Yeni Ödev Oluştur
     </div>
+
     <div class="card-body">
-        <form id="createAssignmentForm">
+        <form id="createAssignmentForm" method="post">
+            @Html.AntiForgeryToken()
+
             <div class="mb-3">
-                <label class="form-label">Başlık</label>
-                <input asp-for="Title" class="form-control" />
+                <label asp-for="Title" class="form-label">Başlık</label>
+                <input asp-for="Title" class="form-control" placeholder="Örn: Hafta 3 - SQL Ödevi" />
                 <span asp-validation-for="Title" class="text-danger"></span>
             </div>
+
             <div class="mb-3">
-                <label class="form-label">Açıklama</label>
-                <textarea asp-for="Description" class="form-control"></textarea>
+                <label asp-for="Description" class="form-label">Açıklama</label>
+                <textarea asp-for="Description" class="form-control" rows="4" placeholder="Ödev detayını yazın..."></textarea>
                 <span asp-validation-for="Description" class="text-danger"></span>
             </div>
+
             <div class="mb-3">
-                <label class="form-label">Bitiş Tarihi</label>
+                <label asp-for="DueDate" class="form-label">Bitiş Tarihi</label>
                 <input asp-for="DueDate" type="datetime-local" class="form-control" />
+                <span asp-validation-for="DueDate" class="text-danger"></span>
+                <div class="form-text">Boş bırakılırsa teslim tarihi yok kabul edilir.</div>
             </div>
+
             <div class="mb-3">
-                <label class="form-label">Kategori</label>
-                <select asp-for="CategoryId" class="form-select">
+                <label asp-for="CategoryId" class="form-label">Kategori</label>
+                <select asp-for="CategoryId" class="form-select" required>
                     <option value="">Seçiniz</option>
-                    @foreach (var c in categories!)
+                    @foreach (var c in categories)
                     {
                         <option value="@c.Id">@c.Name</option>
                     }
                 </select>
                 <span asp-validation-for="CategoryId" class="text-danger"></span>
             </div>
-            <button type="button" class="btn btn-success" id="btnSaveAssignment">Kaydet</button>
+
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-success" id="btnSaveAssignment">
+                    Kaydet
+                </button>
+                <button type="reset" class="btn btn-outline-secondary">
+                    Temizle
+                </button>
+            </div>
         </form>
     </div>
 </div>

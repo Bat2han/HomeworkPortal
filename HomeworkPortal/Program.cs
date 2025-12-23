@@ -1,37 +1,51 @@
-using HomeworkPortal.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.Cookies;
+ï»¿using HomeworkPortal.Data;
+using HomeworkPortal.Hubs;
+using HomeworkPortal.Models;
 using HomeworkPortal.Repositories;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // MVC
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// DbContext
+builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Repository
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 
-// DbContext: SQL Server'a baðlan
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+// âœ… SignalR
+builder.Services.AddSignalR();
 
-// Cookie tabanlý kimlik doðrulama
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Account/Login";   // giriþ sayfasý
-        options.LogoutPath = "/Account/Logout"; // çýkýþ
-        options.AccessDeniedPath = "/Account/AccessDenied"; // yetkisiz eriþim
-    });
+// âœ… ASP.NET Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
+{
+    // Demo/Ã–dev iÃ§in basitleÅŸtirilmiÅŸ parola kurallarÄ±
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 4;
 
-// Basit yetkilendirme (rol için)
-builder.Services.AddAuthorization();
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+});
 
 var app = builder.Build();
 
-// Pipeline
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -43,12 +57,21 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Cookie & Role kontrolü burada devreye girer
 app.UseAuthentication();
 app.UseAuthorization();
+
+
+app.MapHub<NotificationHub>("/hubs/notifications");
+
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+
+using (var scope = app.Services.CreateScope())
+{
+    await IdentitySeed.SeedAsync(scope.ServiceProvider);
+}
 
 app.Run();

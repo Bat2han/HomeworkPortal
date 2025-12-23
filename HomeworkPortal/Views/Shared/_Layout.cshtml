@@ -9,8 +9,18 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
 
     <style>
-        body { background-color: #f8f9fa; }
-        .navbar-brand { font-weight: 600; }
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+        }
+
+        /* Toast container */
+        #toastContainer {
+            z-index: 1080;
+        }
     </style>
 </head>
 
@@ -27,7 +37,6 @@
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-
                     <li class="nav-item">
                         <a class="nav-link" asp-controller="Home" asp-action="Index">Ana Sayfa</a>
                     </li>
@@ -36,6 +45,12 @@
                     {
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="Admin" asp-action="Index">Admin Paneli</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Admin" asp-action="Categories">Kategori Yönetimi</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Admin" asp-action="Users">Kullanıcılar</a>
                         </li>
                     }
 
@@ -54,7 +69,7 @@
                     }
                 </ul>
 
-                <!-- Sağ taraf (login kısmı) -->
+                <!-- Sağ taraf -->
                 <ul class="navbar-nav ms-auto">
                     @if (User.Identity?.IsAuthenticated ?? false)
                     {
@@ -83,9 +98,90 @@
         @RenderBody()
     </div>
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
     <!-- JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    @* SignalR sadece Admin ise yüklensin *@
+    @if (User.IsInRole("Admin"))
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+        <script>
+            (function () {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/hubs/notifications")
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on("NewAssignment", function (data) {
+                    // Toast
+                    showToast(
+                        "Yeni Ödev Eklendi",
+                        `Başlık: ${data.title}<br>Öğretmen: ${data.teacher}<br>Son Tarih: ${data.dueDate}`
+                    );
+
+                    // ✅ Admin dashboard: toplam ödev +1
+                    const totalEl = document.getElementById("totalAssignments");
+                    if (totalEl) {
+                        const current = parseInt((totalEl.innerText || "0").trim(), 10);
+                        totalEl.innerText = (isNaN(current) ? 0 : current) + 1;
+                    }
+
+                    // ✅ Admin dashboard: son ödev kartı (Index sayfasındaysa günceller)
+                    const lastTitle = document.getElementById("lastAssignmentTitle");
+                    const lastMeta = document.getElementById("lastAssignmentMeta");
+                    const lastDue  = document.getElementById("lastAssignmentDue");
+
+                    if (lastTitle) lastTitle.innerText = data.title || "-";
+
+                    // Meta: Oluşturma + Öğretmen
+                    if (lastMeta) {
+                        const createdAt = data.createdAt || "-";
+                        const teacher = data.teacher || "-";
+                        lastMeta.innerText = `Oluşturma: ${createdAt} • Öğretmen: ${teacher}`;
+                    }
+
+                    // Due: Son tarih
+                    if (lastDue) {
+                        lastDue.innerText = `Son Tarih: ${data.dueDate || "-"}`;
+                    }
+                });
+
+                connection.start().catch(err => console.error(err.toString()));
+
+                function showToast(title, htmlMessage) {
+                    const container = document.getElementById("toastContainer");
+
+                    const toastEl = document.createElement("div");
+                    toastEl.className = "toast align-items-center text-bg-dark border-0 mb-2";
+                    toastEl.setAttribute("role", "alert");
+                    toastEl.setAttribute("aria-live", "assertive");
+                    toastEl.setAttribute("aria-atomic", "true");
+
+                    toastEl.innerHTML = `
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <div class="fw-semibold">${title}</div>
+                                <div class="small">${htmlMessage}</div>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    `;
+
+                    container.appendChild(toastEl);
+
+                    const bsToast = new bootstrap.Toast(toastEl, { delay: 5000 });
+                    bsToast.show();
+
+                    toastEl.addEventListener("hidden.bs.toast", () => toastEl.remove());
+                }
+            })();
+        </script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

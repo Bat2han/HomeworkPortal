@@ -4,16 +4,18 @@ using System.Linq.Expressions;
 
 namespace HomeworkPortal.Repositories
 {
-    // EF Core kullanan generic repository implementasyonu
+    /// <summary>
+    /// EF Core kullanan generic repository implementasyonu
+    /// </summary>
     public class EfRepository<T> : IRepository<T> where T : class
     {
-        private readonly ApplicationDbContext _context;
+        private readonly AppDbContext _context;
         private readonly DbSet<T> _dbSet;
 
-        public EfRepository(ApplicationDbContext context)
+        public EfRepository(AppDbContext context)
         {
             _context = context;
-            _dbSet = _context.Set<T>(); // Hangi T ise onun tablosuna bağlan
+            _dbSet = _context.Set<T>();
         }
 
         public async Task<T?> GetByIdAsync(int id)
@@ -23,12 +25,12 @@ namespace HomeworkPortal.Repositories
 
         public async Task<List<T>> GetAllAsync()
         {
-            return await _dbSet.ToListAsync();
+            return await _dbSet.AsNoTracking().ToListAsync();
         }
 
         public async Task<List<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.Where(predicate).ToListAsync();
+            return await _dbSet.AsNoTracking().Where(predicate).ToListAsync();
         }
 
         public async Task AddAsync(T entity)

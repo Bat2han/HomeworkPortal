@@ -1,0 +1,38 @@
+﻿@model IEnumerable<HomeworkPortal.Models.Submission>
+@{
+    ViewData["Title"] = "Ödev Teslimleri";
+}
+
+<h2 class="mb-3">Ödev Teslimleri</h2>
+<div class="text-muted mb-3">Ödev Id: @ViewBag.AssignmentId</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Bu ödev için henüz teslim yok.</div>
+}
+else
+{
+    <table class="table table-striped table-hover bg-white shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Id</th>
+                <th>Öğrenci Id</th>
+                <th>Dosya</th>
+                <th>Yüklenme</th>
+                <th>Durum</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in Model)
+            {
+                <tr>
+                    <td>@s.Id</td>
+                    <td>@s.StudentId</td>
+                    <td>@s.OriginalFileName</td>
+                    <td>@s.UploadedAt.ToString("g")</td>
+                    <td>@s.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
